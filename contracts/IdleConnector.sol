@@ -52,6 +52,16 @@ contract IdleConnector is Ownable{
     // @dev put all addreses in an array
     address[] connectorAddresses = [daiConnectorAddress, wethConnectorAddress, usdcConnectorAddress, usdtConnectorAddress, wbtcConnectorAddress];
 
+    // @dev create instances of IIdleTokens.sol for each contract address
+    IIdleToken idleDAI = IIdleToken(daiConnectorAddress);
+    IIdleToken idleWETH = IIdleToken(wethConnectorAddress);
+    IIdleToken idleUSDC = IIdleToken(usdcConnectorAddress);
+    IIdleToken idleUSDT = IIdleToken(usdtConnectorAddress);
+    IIdleToken idleWBTC = IIdleToken(wbtcConnectorAddress);
+    // @dev put all idle tokens in an array
+    IIdleToken[] idleTokens = [idleDAI, idleWETH, idleUSDC, idleUSDT, idleWBTC];
+
+
     // @dev the mapping of addressees to their ratio
     mapping(address => uint256) ratios;
     // @dev the mapping of addresses to the amount of tokens they have
@@ -84,14 +94,7 @@ contract IdleConnector is Ownable{
         ratios[wbtcConnectorAddress] = newratios[4];
     }
 
-    // @dev function that creates instances of IIdleTokens.sol for each contract address
-    IIdleToken idleDAI = IIdleToken(daiConnectorAddress);
-    IIdleToken idleWETH = IIdleToken(wethConnectorAddress);
-    IIdleToken idleUSDC = IIdleToken(usdcConnectorAddress);
-    IIdleToken idleUSDT = IIdleToken(usdtConnectorAddress);
-    IIdleToken idleWBTC = IIdleToken(wbtcConnectorAddress);
-    // @dev put all idle tokens in an array
-    IIdleToken[] idleTokens = [idleDAI, idleWETH, idleUSDC, idleUSDT, idleWBTC];
+    
 
     // @dev function that allows deposits into idle(basically mints idle tokens)
     function depositIdle(IERC20 token, IIdleToken _connector, address _connectorAddress, uint256 _tokens) private{
@@ -151,17 +154,24 @@ contract IdleConnector is Ownable{
     }
 
     //@dev helper function ratio matcher
-    function ratioMatcher(address _connectorAddress) private returns (uint256){
+    function ratioMatcher(address _connectorAddress) private returns (uint256, uint16){
         if (rawBalances[_connectorAddress]!=ratios[_connectorAddress]*totalBalance) {
             // @dev if the ratio is not the same, then we need to rebalance
             // @dev calculate the difference between the raw balance and the ratio*total balance
-            uint256 difference = rawBalances[_connectorAddress] - (ratios[_connectorAddress]*totalBalance);
-            // @dev check if difference is positive or negative
-            return difference;
+            if(rawBalances[_connectorAddress]>ratios[_connectorAddress]*totalBalance) {
+                uint256 difference = rawBalances[_connectorAddress] - (ratios[_connectorAddress]*totalBalance);
+                // @dev return difference and the number denoting excess or shortage
+                return (difference,1);
+            }
+            else (rawBalances[_connectorAddress]<ratios[_connectorAddress]*totalBalance) {
+                uint256 difference = (ratios[_connectorAddress]*totalBalance) - rawBalances[_connectorAddress];
+                // @dev return difference and the number denoting excess or shortage
+                return (difference,2);
+            }
         }
         else {
             // @dev if the ratio is the same, then we don't need to rebalance
-            return 0;
+            return (0,0);
         }
 
     }
@@ -176,7 +186,7 @@ contract IdleConnector is Ownable{
         // @dev differences from ideal ratio
         // mapping(address => uint256) memory diffs;
         // @dev differences from ideal ratio array
-        uint256 [] memory  diffs;
+        uint256 [2][] memory  diffs;
         // @dev loop through all the addresses
         for (uint256 i = 0; i < connectorAddresses.length; i++) {
             diffs[i] = ratioMatcher(connectorAddresses[i]);
@@ -189,8 +199,8 @@ contract IdleConnector is Ownable{
         //first withdraw excess tokens from idle tokens
         for(uint i =0 ; i<connectorAddresses.length; i++){
             // @dev if the difference is positive, then we need to rebalance
-            if(diffs[i] > 0){
-                withdrawIdle(idleTokens[i], diffs[i]);
+            if(diffs[i][1] == 1){
+                withdrawIdle(idleTokens[i], diffs[i][0]);
             }
         }
         //then deposit tokens to idle tokens
@@ -199,8 +209,8 @@ contract IdleConnector is Ownable{
             // @dev for now we will just leave it as is and will have to add a mechanism for
             // swapping tokens later
 
-            if(diffs[i] < 0){
-                depositIdle(tokens[i],idleTokens[i], connectorAddresses[i], 0-diffs[i]);
+            if(diffs[i][1] ==2){
+                depositIdle(tokens[i],idleTokens[i], connectorAddresses[i], diffs[i][0]);
             }
         }
                
