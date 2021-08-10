@@ -11,10 +11,10 @@ contract MVP {
     }
 
     //adresses of the contracts
-    address daiAddress = 0x0f07d1164aeb85C6b5d8fA1256C26E45140fE40B;
-    address usdcAddress = 0x7079f3762805CFf9C979a5bDC6f5648bCFEE76C8;
-    address idleDaiAddress = 0x295CA5bC5153698162dDbcE5dF50E436a58BA21e;
-    address idleUsdcAddress = 0x0de23D3bc385a74E2196cfE827C8a640B8774B9f;
+    address public daiAddress = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
+    address public usdcAddress = 0x7079f3762805CFf9C979a5bDC6f5648bCFEE76C8;
+    address public idleDaiAddress = 0x295CA5bC5153698162dDbcE5dF50E436a58BA21e;
+    address public idleUsdcAddress = 0x0de23D3bc385a74E2196cfE827C8a640B8774B9f;
     //create erc20 and idle tokens
     IERC20 dai = IERC20(daiAddress);
     IERC20 usdc = IERC20(usdcAddress);
@@ -22,15 +22,21 @@ contract MVP {
     IIdleToken idleUsdc = IIdleToken(idleUsdcAddress);
 
     //things to keep track of
-    uint256 tvl;
-    mapping(address=>uint256) individualTvl;
-    uint256 totalDai;
-    uint256 totalUsdc;
-    uint256 daiPerc;
-    uint256 usdcPerc;
+    uint256 public tvl;
+    mapping(address=>uint256) public individualTvl;
+    uint256 public totalDai;
+    uint256 public totalUsdc;
+    uint256 public daiPerc;
+    uint256 public usdcPerc;
 
     //Transfer event
     event Transfer(address from, address to, uint256 amount);
+
+    
+    //random payable func to give contract ether
+    function payme() payable public{
+        //nothing to do
+    }
 
     //deposit usdc and dai
     //depositDAI
